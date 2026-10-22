@@ -21,3 +21,17 @@ jobs:
           test "$(wc -c <response.txt)" -eq 43
           test "$(sha256sum response.txt | cut -d' ' -f1)" = '97a8ae7bfb3fe2f1fe50ab14e87833fac5f1d6ee71ce5f1bdd4ba22655fc82c7'
           echo 'EXTERNAL_CHALLENGE_MATCH_PASS'
+
+      - name: Verify public MCP and OAuth discovery on port 10000
+        shell: bash
+        run: |
+          set -euo pipefail
+          origin='https://adminserver.tailc4326a.ts.net:10000'
+          actual="$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' "$origin/mcp")"
+          test "$actual" = '401'
+          for suffix in '/.well-known/oauth-protected-resource/mcp' '/.well-known/oauth-authorization-server/oauth'; do
+            curl --fail --silent --show-error --max-time 15 "$origin$suffix" -o response.json
+            python3 -m json.tool response.json > /dev/null
+            echo "$suffix reachable and valid JSON"
+          done
+          echo 'EXTERNAL_MCP_OAUTH_DISCOVERY_PASS'
