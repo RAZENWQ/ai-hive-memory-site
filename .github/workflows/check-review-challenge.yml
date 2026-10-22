@@ -1,0 +1,23 @@
+name: Check review challenge reachability
+on:
+  push:
+    paths:
+      - ".github/workflows/check-review-challenge.yml"
+  workflow_dispatch:
+jobs:
+  verify-public-route:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check exact external response on HTTPS 443
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://adminserver.tailc4326a.ts.net/.well-known/openai-apps-challenge'
+          curl --fail --silent --show-error --location --max-time 20 \
+            --header 'Cache-Control: no-cache' \
+            -o response.txt -w 'remote_ip=%{remote_ip} http=%{http_code} tls=%{ssl_verify_result}\n' "$url"
+          sha256sum response.txt | awk '{print "sha256=" $1}'
+          test "$(wc -c <response.txt)" -eq 43
+          test "$(sha256sum response.txt | cut -d' ' -f1)" = '97a8ae7bfb3fe2f1fe50ab14e87833fac5f1d6ee71ce5f1bdd4ba22655fc82c7'
+          echo 'EXTERNAL_CHALLENGE_MATCH_PASS'
